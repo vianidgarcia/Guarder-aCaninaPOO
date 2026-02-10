@@ -4,6 +4,7 @@ using System.Windows.Forms;
 
 namespace GuarderíaCanina
 {
+    // VERSIÓN 1.1.0 Inicialización de controles
     public partial class FormPrincipal : Form
     {
         private GestorReservas gestor;
@@ -357,12 +358,25 @@ namespace GuarderíaCanina
 
         #endregion
 
+        // VERSIÓN 1.1.0: Inicialización segura de controles
         private void FormPrincipal_Load(object sender, EventArgs e)
         {
+            // Inicializar controles básicos
             dtpFechaIngreso.Value = DateTime.Today;
+
+            //Establecer visibilidad de paneles directamente
+            // sin disparar el evento SelectedIndexChanged
+            panelHospedaje.Visible = true;
+            panelLimpieza.Visible = false;
+            panelPaseo.Visible = false;
+
+            // Ahora sí podemos establecer el índice sin problemas
             cmbTipoServicio.SelectedIndex = 0;
+
+            // Cargar datos iniciales
             ActualizarListaClientes();
             ActualizarListaReservas();
+            CargarReservasEnComboBox();  //Agregado para inicializar ComboBox de servicios
         }
     }
 }
