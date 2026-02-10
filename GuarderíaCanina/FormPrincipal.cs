@@ -5,12 +5,11 @@ using System.Linq;
 
 namespace GuarderíaCanina
 {
-    //fix: Manejo seguro de ComboBox
+   //Corrección crítica: Validación de listas vacías
     public partial class FormPrincipal : Form
     {
         private GestorReservas gestor;
 
-        //Eliminamos el uso de Split()
         public class ClienteComboItem
         {
             public string Id { get; set; }
@@ -75,7 +74,6 @@ namespace GuarderíaCanina
                     return;
                 }
 
-                // ✅ VERSIÓN 1.1.1: CORRECCIÓN - Uso seguro sin Split()
                 var clienteItem = (ClienteComboItem)cmbClientesMascotas.SelectedItem;
                 string idCliente = clienteItem.Id;
 
@@ -132,24 +130,20 @@ namespace GuarderíaCanina
             }
         }
 
-        // ✅ VERSIÓN 1.1.1: CORRECCIÓN - Usar ClienteComboItem en lugar de strings
         private void CargarClientesEnComboBox()
         {
             var clientes = gestor.ObtenerTodosLosClientes();
 
-            // Crear lista de items tipados
             var clientesItems = clientes.Select(c => new ClienteComboItem
             {
                 Id = c.IdCliente,
                 Nombre = c.Nombre
             }).ToList();
 
-            // Actualizar ComboBox de mascotas
             cmbClientesMascotas.DataSource = null;
             cmbClientesMascotas.DataSource = clientesItems;
             cmbClientesMascotas.DisplayMember = "ToString";
 
-            // Actualizar ComboBox de reservas (crear nueva lista para evitar referencias compartidas)
             var clientesItemsCopy = clientes.Select(c => new ClienteComboItem
             {
                 Id = c.IdCliente,
@@ -186,7 +180,6 @@ namespace GuarderíaCanina
 
             try
             {
-                // ✅ VERSIÓN 1.1.1: CORRECCIÓN - Uso seguro sin Split()
                 var clienteItem = (ClienteComboItem)cmbClientesReservas.SelectedItem;
                 string idCliente = clienteItem.Id;
 
@@ -212,7 +205,6 @@ namespace GuarderíaCanina
                     return;
                 }
 
-                // ✅ VERSIÓN 1.1.1: CORRECCIÓN - Uso seguro sin Split()
                 var clienteItem = (ClienteComboItem)cmbClientesReservas.SelectedItem;
                 string idCliente = clienteItem.Id;
                 string nombreMascota = cmbMascotasReservas.SelectedItem.ToString();
@@ -369,6 +361,7 @@ namespace GuarderíaCanina
             }
         }
 
+        // Validación de listas vacías
         private void btnEliminarServicio_Click(object sender, EventArgs e)
         {
             try
@@ -377,6 +370,15 @@ namespace GuarderíaCanina
                 {
                     MessageBox.Show("Por favor, seleccione un servicio para eliminar.", "Selección requerida",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Validar si la lista realmente contiene servicios
+                if (lstServicios.Items.Count == 1 &&
+                    lstServicios.Items[0].ToString() == "(Sin servicios registrados)")
+                {
+                    MessageBox.Show("No hay servicios para eliminar.",
+                        "Sin servicios", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
@@ -397,6 +399,12 @@ namespace GuarderíaCanina
 
                         ActualizarListaServiciosDeReserva();
                         ActualizarListaReservas();
+                    }
+                    else
+                    {
+                        // Mensaje más claro cuando falla la eliminación
+                        MessageBox.Show("No se pudo eliminar el servicio. Por favor, intente nuevamente.",
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
