@@ -1,13 +1,23 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace GuarderíaCanina
 {
-    // VERSIÓN 1.1.0 Inicialización de controles
+    //fix: Manejo seguro de ComboBox
     public partial class FormPrincipal : Form
     {
         private GestorReservas gestor;
+
+        //Eliminamos el uso de Split()
+        public class ClienteComboItem
+        {
+            public string Id { get; set; }
+            public string Nombre { get; set; }
+
+            public override string ToString() => $"{Id} - {Nombre}";
+        }
 
         public FormPrincipal()
         {
@@ -65,8 +75,10 @@ namespace GuarderíaCanina
                     return;
                 }
 
-                string clienteSeleccionado = cmbClientesMascotas.SelectedItem.ToString();
-                string idCliente = clienteSeleccionado.Split('-')[0].Trim();
+                // ✅ VERSIÓN 1.1.1: CORRECCIÓN - Uso seguro sin Split()
+                var clienteItem = (ClienteComboItem)cmbClientesMascotas.SelectedItem;
+                string idCliente = clienteItem.Id;
+
                 DateTime fechaNacimiento = DateTime.Today.AddYears(-(int)numEdad.Value);
 
                 gestor.RegistrarMascota(idCliente, txtNombreMascota.Text.Trim(),
@@ -81,6 +93,11 @@ namespace GuarderíaCanina
             catch (InvalidOperationException ex)
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (InvalidCastException)
+            {
+                MessageBox.Show("Error al obtener la información del cliente seleccionado.", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -115,14 +132,33 @@ namespace GuarderíaCanina
             }
         }
 
+        // ✅ VERSIÓN 1.1.1: CORRECCIÓN - Usar ClienteComboItem en lugar de strings
         private void CargarClientesEnComboBox()
         {
-            var clientes = gestor.ObtenerClientesResumidos();
+            var clientes = gestor.ObtenerTodosLosClientes();
+
+            // Crear lista de items tipados
+            var clientesItems = clientes.Select(c => new ClienteComboItem
+            {
+                Id = c.IdCliente,
+                Nombre = c.Nombre
+            }).ToList();
+
+            // Actualizar ComboBox de mascotas
             cmbClientesMascotas.DataSource = null;
-            cmbClientesMascotas.DataSource = clientes;
+            cmbClientesMascotas.DataSource = clientesItems;
+            cmbClientesMascotas.DisplayMember = "ToString";
+
+            // Actualizar ComboBox de reservas (crear nueva lista para evitar referencias compartidas)
+            var clientesItemsCopy = clientes.Select(c => new ClienteComboItem
+            {
+                Id = c.IdCliente,
+                Nombre = c.Nombre
+            }).ToList();
 
             cmbClientesReservas.DataSource = null;
-            cmbClientesReservas.DataSource = new System.Collections.Generic.List<string>(clientes);
+            cmbClientesReservas.DataSource = clientesItemsCopy;
+            cmbClientesReservas.DisplayMember = "ToString";
         }
 
         private void LimpiarCamposCliente()
@@ -148,12 +184,21 @@ namespace GuarderíaCanina
         {
             if (cmbClientesReservas.SelectedIndex == -1) return;
 
-            string clienteSeleccionado = cmbClientesReservas.SelectedItem.ToString();
-            string idCliente = clienteSeleccionado.Split('-')[0].Trim();
+            try
+            {
+                // ✅ VERSIÓN 1.1.1: CORRECCIÓN - Uso seguro sin Split()
+                var clienteItem = (ClienteComboItem)cmbClientesReservas.SelectedItem;
+                string idCliente = clienteItem.Id;
 
-            var mascotas = gestor.ObtenerNombresMascotas(idCliente);
-            cmbMascotasReservas.DataSource = mascotas;
-            cmbMascotasReservas.Enabled = mascotas.Count > 0;
+                var mascotas = gestor.ObtenerNombresMascotas(idCliente);
+                cmbMascotasReservas.DataSource = mascotas;
+                cmbMascotasReservas.Enabled = mascotas.Count > 0;
+            }
+            catch (InvalidCastException)
+            {
+                MessageBox.Show("Error al obtener la información del cliente.", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void btnCrearReserva_Click(object sender, EventArgs e)
@@ -167,8 +212,9 @@ namespace GuarderíaCanina
                     return;
                 }
 
-                string clienteSeleccionado = cmbClientesReservas.SelectedItem.ToString();
-                string idCliente = clienteSeleccionado.Split('-')[0].Trim();
+                // ✅ VERSIÓN 1.1.1: CORRECCIÓN - Uso seguro sin Split()
+                var clienteItem = (ClienteComboItem)cmbClientesReservas.SelectedItem;
+                string idCliente = clienteItem.Id;
                 string nombreMascota = cmbMascotasReservas.SelectedItem.ToString();
 
                 gestor.CrearReserva(idCliente, nombreMascota, dtpFechaIngreso.Value);
@@ -182,6 +228,11 @@ namespace GuarderíaCanina
             catch (InvalidOperationException ex)
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (InvalidCastException)
+            {
+                MessageBox.Show("Error al obtener la información del cliente seleccionado.", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -358,25 +409,23 @@ namespace GuarderíaCanina
 
         #endregion
 
-        // VERSIÓN 1.1.0: Inicialización segura de controles
         private void FormPrincipal_Load(object sender, EventArgs e)
         {
             // Inicializar controles básicos
             dtpFechaIngreso.Value = DateTime.Today;
 
-            //Establecer visibilidad de paneles directamente
-            // sin disparar el evento SelectedIndexChanged
+            // Establecer visibilidad de paneles directamente
             panelHospedaje.Visible = true;
             panelLimpieza.Visible = false;
             panelPaseo.Visible = false;
 
-            // Ahora sí podemos establecer el índice sin problemas
+            // Establecer índice
             cmbTipoServicio.SelectedIndex = 0;
 
             // Cargar datos iniciales
             ActualizarListaClientes();
             ActualizarListaReservas();
-            CargarReservasEnComboBox();  //Agregado para inicializar ComboBox de servicios
+            CargarReservasEnComboBox();
         }
     }
 }
