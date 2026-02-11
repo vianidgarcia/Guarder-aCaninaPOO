@@ -13,7 +13,12 @@ namespace GuarderíaCanina
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new FormPrincipal());
+
+            // Crear instancia compartida del gestor
+            GestorReservas gestor = new GestorReservas();
+
+            // Iniciar con el formulario de Clientes y Mascotas
+            Application.Run(new FormClientesMascotas(gestor));
         }
     }
 }
