@@ -1,4 +1,4 @@
-# 📚 Sistema de Gestión de Guardería Canina
+# Sistema de Gestión de Guardería Canina
 
 Proyecto de Programación Orientada a Objetos - Segundo Semestre
 
